@@ -27,6 +27,7 @@ import {
 import { useUserId } from '@/lib/auth';
 import { formatINR } from '@/lib/balances';
 import { computeBadges } from '@/lib/insights';
+import { playSound } from '@/lib/sounds';
 
 export default function GroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -85,6 +86,7 @@ export default function GroupScreen() {
     const doDelete = async () => {
       try {
         await deleteExpense(expense.id);
+        playSound('delete'); // whoosh
         load();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));

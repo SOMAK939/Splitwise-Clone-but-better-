@@ -6,7 +6,8 @@
  */
 import * as Linking from 'expo-linking';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useState } from 'react';
 import { Share, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -25,6 +26,7 @@ import {
 import { useUserId } from '@/lib/auth';
 import { formatINR } from '@/lib/balances';
 import { computeBadges, computeNudges, computeRecap, monthOf, type RoastLevel } from '@/lib/insights';
+import { playSound } from '@/lib/sounds';
 
 const ROAST_LEVELS: { id: RoastLevel; label: string; help: string }[] = [
   { id: 'off', label: '😇 Off', help: 'Only nice badges. Good for family and office groups.' },
@@ -53,6 +55,22 @@ export default function InsightsScreen() {
       load();
     }, [load]),
   );
+
+  // 🎺 Sad trombone the first time each month you see a roast badge about you.
+  useEffect(() => {
+    if (!detail || detail.group.roast_level === 'off') return;
+    const today = localToday();
+    const roastedMe = computeBadges(toInsightInput(detail, today)).some((b) => b.negative && b.userId === userId);
+    if (!roastedMe) return;
+    const key = `splitfree.roastSound.${id}.${monthOf(today)}`;
+    AsyncStorage.getItem(key)
+      .then((done) => {
+        if (done) return;
+        playSound('roast');
+        return AsyncStorage.setItem(key, '1');
+      })
+      .catch(() => {});
+  }, [detail, id, userId]);
 
   if (!detail) {
     return (
@@ -166,7 +184,14 @@ export default function InsightsScreen() {
               </ThemedText>
             </ThemedText>
             {nudge.userId !== userId && (
-              <Button title="Nudge" variant="secondary" onPress={() => shareText(nudge.message)} />
+              <Button
+                title="Nudge"
+                variant="secondary"
+                onPress={() => {
+                  playSound('nudge'); // 👀 ding-dong
+                  shareText(nudge.message);
+                }}
+              />
             )}
           </View>
         ))}

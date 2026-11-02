@@ -15,6 +15,7 @@ import { Spacing } from '@/constants/theme';
 import { getGroupDetail, recordSettlement, upiLink, type GroupDetail, type Settlement } from '@/lib/api';
 import { useUserId } from '@/lib/auth';
 import { formatINR, rupeesToPaise } from '@/lib/balances';
+import { playSound } from '@/lib/sounds';
 
 export default function SettleScreen() {
   const params = useLocalSearchParams<{ id: string; from?: string; to?: string; amount?: string }>();
@@ -78,6 +79,7 @@ export default function SettleScreen() {
     setBusy(true);
     try {
       await recordSettlement({ groupId, fromUser: from, toUser: to, amountPaise: amount, method });
+      playSound('settle-up'); // 🎉
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

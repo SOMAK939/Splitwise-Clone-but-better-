@@ -8,9 +8,10 @@ import { useEffect, useState } from 'react';
 import { Alert, Platform, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, ErrorText, Field, Loading, Screen } from '@/components/ui';
+import { Button, Card, Chip, ErrorText, Field, Loading, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { deleteMyAccount, getProfile, updateProfile } from '@/lib/api';
+import { getSoundsOn, playSound, setSoundsOn } from '@/lib/sounds';
 import { useAuth, useUserId } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -22,6 +23,17 @@ export default function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [sounds, setSounds] = useState(true);
+
+  useEffect(() => {
+    getSoundsOn().then(setSounds);
+  }, []);
+
+  async function toggleSounds(on: boolean) {
+    setSounds(on);
+    await setSoundsOn(on);
+    if (on) playSound('add-expense'); // a quick preview
+  }
 
   useEffect(() => {
     getProfile(userId)
@@ -88,6 +100,16 @@ export default function ProfileScreen() {
         <ErrorText message={error} />
         {saved && <ThemedText>Saved ✅</ThemedText>}
         <Button title="Save" onPress={save} loading={busy} />
+      </Card>
+      <Card>
+        <ThemedText type="smallBold">🔊 Sound effects</ThemedText>
+        <View style={{ flexDirection: 'row', gap: Spacing.two }}>
+          <Chip label="On" selected={sounds} onPress={() => toggleSounds(true)} />
+          <Chip label="Off" selected={!sounds} onPress={() => toggleSounds(false)} />
+        </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          Ka-ching when you add an expense, ta-da when you settle up. Saved on this device.
+        </ThemedText>
       </Card>
       <Button title="Sign out" variant="secondary" onPress={() => supabase.auth.signOut()} />
       <Button title="Delete my account" variant="danger" onPress={confirmDelete} loading={busy} />

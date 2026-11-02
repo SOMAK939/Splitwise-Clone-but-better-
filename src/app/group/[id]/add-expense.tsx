@@ -15,6 +15,7 @@ import { Spacing } from '@/constants/theme';
 import { CATEGORIES, createExpense, getGroupDetail, type Profile } from '@/lib/api';
 import { useUserId } from '@/lib/auth';
 import { formatINR, rupeesToPaise, splitEqually } from '@/lib/balances';
+import { playSound } from '@/lib/sounds';
 
 export default function AddExpenseScreen() {
   const { id: groupId } = useLocalSearchParams<{ id: string }>();
@@ -85,6 +86,7 @@ export default function AddExpenseScreen() {
         payers: [{ user_id: payerId, amount_paise: amount }],
         shares: shares.map((s) => ({ user_id: s.userId, amount_paise: s.amount })),
       });
+      playSound('add-expense'); // 💸 ka-ching!
       router.back(); // close the form; the group screen reloads itself
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
