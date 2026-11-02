@@ -16,6 +16,7 @@ import {
   type SettlementMoney,
   type Transfer,
 } from './balances';
+import type { InsightInput } from './insights';
 import { supabase } from './supabase';
 
 // ---------- Types: the shape of our data in the app ----------
@@ -51,12 +52,15 @@ export type Settlement = {
   amount_paise: number;
   method: 'upi' | 'cash' | 'other';
   settled_on: string;
+  created_by: string;
 };
 
 /** Everything a group screen needs, loaded together. */
 export type GroupDetail = {
   group: Group;
   members: Profile[];
+  /** Ids of members who chose to hide their own negative badges. */
+  hiddenBadgeUsers: string[];
   expenses: Expense[];
   settlements: Settlement[];
   balances: Balances;
@@ -137,7 +141,10 @@ export async function getGroupDetail(groupId: string): Promise<GroupDetail> {
       .eq('id', groupId)
       .single(),
     // "profiles(...)" pulls in each member's profile through the foreign key.
-    supabase.from('group_members').select('profiles(id, display_name, upi_id)').eq('group_id', groupId),
+    supabase
+      .from('group_members')
+      .select('hide_negative_badges, profiles(id, display_name, upi_id)')
+      .eq('group_id', groupId),
     supabase
       .from('expenses')
       .select(
@@ -149,13 +156,15 @@ export async function getGroupDetail(groupId: string): Promise<GroupDetail> {
       .order('created_at', { ascending: false }),
     supabase
       .from('settlements')
-      .select('id, group_id, from_user, to_user, amount_paise, method, settled_on')
+      .select('id, group_id, from_user, to_user, amount_paise, method, settled_on, created_by')
       .eq('group_id', groupId)
       .order('created_at', { ascending: false }),
   ]);
 
   const group = check(groupRes) as Group;
-  const members = (check(membersRes) as unknown as { profiles: Profile }[]).map((m) => m.profiles);
+  const memberRows = check(membersRes) as unknown as { hide_negative_badges: boolean; profiles: Profile }[];
+  const members = memberRows.map((m) => m.profiles);
+  const hiddenBadgeUsers = memberRows.filter((m) => m.hide_negative_badges).map((m) => m.profiles.id);
   const expenses = check(expensesRes) as unknown as Expense[];
   const settlements = check(settlementsRes) as Settlement[];
 
@@ -168,7 +177,7 @@ export async function getGroupDetail(groupId: string): Promise<GroupDetail> {
     ? simplifyDebts(balances)
     : pairwiseDebts(money.expenses, money.settlements);
 
-  return { group, members, expenses, settlements, balances, transfers };
+  return { group, members, hiddenBadgeUsers, expenses, settlements, balances, transfers };
 }
 
 /** My net balance in each of my groups (for the home screen). */
@@ -211,6 +220,53 @@ function toMoney(expenses: Expense[], settlements: Settlement[]) {
       amount: Number(s.amount_paise),
     })),
   };
+}
+
+/** Show or hide my own negative badges (Chindi, Slow Settler, Ghost) in a group. */
+export async function setHideNegativeBadges(groupId: string, userId: string, hide: boolean): Promise<void> {
+  check(
+    await supabase
+      .from('group_members')
+      .update({ hide_negative_badges: hide })
+      .eq('group_id', groupId)
+      .eq('user_id', userId),
+  );
+}
+
+/** Convert a loaded group into the shapes insights.ts works with. */
+export function toInsightInput(detail: GroupDetail, today: string): InsightInput {
+  return {
+    members: detail.members.map((m) => ({
+      id: m.id,
+      name: m.display_name,
+      hideNegative: detail.hiddenBadgeUsers.includes(m.id),
+    })),
+    expenses: detail.expenses.map((e) => ({
+      id: e.id,
+      description: e.description,
+      amount: Number(e.amount_paise),
+      category: e.category,
+      date: e.spent_on,
+      createdBy: e.created_by,
+      payers: e.payers.map((p) => ({ userId: p.user_id, amount: Number(p.amount_paise) })),
+      shares: e.shares.map((s) => ({ userId: s.user_id, amount: Number(s.amount_paise) })),
+    })),
+    settlements: detail.settlements.map((s) => ({
+      fromUser: s.from_user,
+      toUser: s.to_user,
+      amount: Number(s.amount_paise),
+      date: s.settled_on,
+      createdBy: s.created_by,
+    })),
+    roastLevel: detail.group.roast_level,
+    today,
+  };
+}
+
+/** Today's date as "YYYY-MM-DD" in the phone's own time zone. */
+export function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // ---------- Expenses ----------
