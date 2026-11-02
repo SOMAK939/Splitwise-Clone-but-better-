@@ -1,130 +1,88 @@
 /**
- * login.tsx — sign in, or create an account.
+ * login.tsx — the first page a new visitor sees.
  *
- * Two ways in: "Continue with Google" (one tap, no password to remember),
- * or email + password. Both go through Supabase Auth.
+ * It's a landing page and a sign-in page in one: it says what SplitFree is,
+ * why it's safe, and how it works, with the sign-in box right at the top so
+ * returning users can get straight in.
  */
 import { Link } from 'expo-router';
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Image, View } from 'react-native';
 
+import { AuthCard } from '@/components/auth-card';
+import { SOURCE_URL } from '@/components/doc-page';
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, ErrorText, Field, Screen } from '@/components/ui';
+import { Card, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { signInWithGoogle } from '@/lib/google-auth';
-import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/hooks/use-theme';
 
-export default function LoginScreen() {
-  // Which form are we showing?
-  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-
-  async function google() {
-    setError(null);
-    setBusy(true);
-    try {
-      await signInWithGoogle();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submit() {
-    setError(null);
-    setInfo(null);
-    setBusy(true);
-    try {
-      if (mode === 'signIn') {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-        // Success: AuthProvider notices the new session and the app moves to Home.
-      } else {
-        if (!name.trim()) throw new Error('Please tell us your name');
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          // Stored with the account; the database copies it into `profiles`.
-          options: { data: { display_name: name.trim() } },
-        });
-        if (error) throw error;
-        // If email confirmation is on in Supabase, there's no session yet.
-        if (!data.session) setInfo('Check your email for a confirmation link, then sign in.');
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
+export default function LandingScreen() {
   return (
     <Screen>
-      <View style={{ marginTop: Spacing.five, gap: Spacing.one }}>
+      {/* ---- Hero: who we are, in one line ---- */}
+      <View style={{ marginTop: Spacing.five, gap: Spacing.two }}>
         <Image
           source={require('@/assets/images/icon.png')}
-          style={{ width: 64, height: 64, borderRadius: 16, marginBottom: Spacing.two }}
+          style={{ width: 64, height: 64, borderRadius: 16 }}
           accessibilityLabel="SplitFree logo"
         />
-        <ThemedText type="subtitle">SplitFree</ThemedText>
+        <ThemedText type="subtitle">Split bills with friends. Free forever.</ThemedText>
         <ThemedText themeColor="textSecondary">
-          Split bills with friends. Free forever, with a little roast.
+          Track shared expenses for your flat, trips and nights out, settle up over UPI, and find out who your group's
+          Chindi of the Month is.
         </ThemedText>
       </View>
 
-      <Card>
-        <Button title="Continue with Google" onPress={google} loading={busy} />
-        <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
-          or use your email
-        </ThemedText>
-        {mode === 'signUp' && (
-          <Field label="Your name" value={name} onChangeText={setName} placeholder="Rahul" autoComplete="name" />
-        )}
-        <Field
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-        />
-        <Field
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="At least 6 characters"
-          secureTextEntry
-          autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
-          onSubmitEditing={submit}
-        />
-        <ErrorText message={error} />
-        {info && <ThemedText>{info}</ThemedText>}
-        <Button
-          variant="secondary"
-          title={mode === 'signIn' ? 'Sign in with email' : 'Create account'}
-          onPress={submit}
-          loading={busy}
-        />
-        <Button
-          variant="secondary"
-          title={mode === 'signIn' ? 'New here? Create an account' : 'Have an account? Sign in'}
-          onPress={() => setMode(mode === 'signIn' ? 'signUp' : 'signIn')}
-          style={{ backgroundColor: 'transparent' }}
-        />
-      </Card>
+      <AuthCard />
 
-      {/* Trust: say plainly what we are, and link to the rules. */}
-      <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
-        Free forever · No ads · We never sell your data
-      </ThemedText>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: Spacing.three }}>
+      {/* ---- Safety, answered up front ---- */}
+      <Section title="Is it safe?">
+        <Point icon="🔒" title="We never touch your money">
+          SplitFree only keeps track of who owes whom. When you pay, your own UPI app (GPay, PhonePe, Paytm) opens and
+          handles it, just like always.
+        </Point>
+        <Point icon="🙈" title="Only your group sees your group">
+          Expenses are visible only to members of that group. The database enforces this, not just the app.
+        </Point>
+        <Point icon="🚫" title="No ads, no data selling">
+          We don't show ads, use tracking cookies or sell data. We don't ask for bank details.
+        </Point>
+        <Point icon="👀" title="Open source">
+          Every line of code is public, so anyone can check what SplitFree does.{' '}
+          <Link href={SOURCE_URL}>
+            <ThemedText type="linkPrimary">See the code</ThemedText>
+          </Link>
+        </Point>
+        <Point icon="🗑️" title="Leave any time">
+          Delete your account from your profile in two taps. Your login and email are removed straight away.
+        </Point>
+      </Section>
+
+      {/* ---- How it works ---- */}
+      <Section title="How it works">
+        <Point icon="1️⃣" title="Make a group">Your flat, a Goa trip, or the office lunch gang.</Point>
+        <Point icon="2️⃣" title="Invite friends with a link">They join in one tap, on any phone. No app store needed.</Point>
+        <Point icon="3️⃣" title="Add expenses as you go">Split equally or by exact amounts. Balances update live.</Point>
+        <Point icon="4️⃣" title="Settle up over UPI">SplitFree works out the fewest payments, then opens your UPI app.</Point>
+      </Section>
+
+      {/* ---- The fun part ---- */}
+      <Section title="Monthly badges">
+        <ThemedText themeColor="textSecondary">
+          Every month your group gets badges like 🪙 Chindi of the Month, 🐢 Slow Settler and 👑 Always Pays First. Too
+          spicy? Turn roasts off for your group, or hide the ones about you.
+        </ThemedText>
+      </Section>
+
+      {/* ---- Who made it ---- */}
+      <Section title="Who makes SplitFree?">
+        <ThemedText themeColor="textSecondary">
+          SplitFree is built by Somak as a free app for friends. If anything looks wrong, or you have an idea, open an
+          issue on GitHub and it gets read.
+        </ThemedText>
+      </Section>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: Spacing.three, marginBottom: Spacing.four }}>
         <Link href="/about">
           <ThemedText type="linkPrimary">About</ThemedText>
         </Link>
@@ -136,5 +94,32 @@ export default function LoginScreen() {
         </Link>
       </View>
     </Screen>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card style={{ gap: Spacing.three }}>
+      <ThemedText type="smallBold" style={{ fontSize: 20, lineHeight: 28 }}>
+        {title}
+      </ThemedText>
+      {children}
+    </Card>
+  );
+}
+
+/** One point with an emoji, a bold title and a short explanation. */
+function Point({ icon, title, children }: { icon: string; title: string; children: ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: Spacing.three }}>
+      <ThemedText style={{ fontSize: 22, lineHeight: 28 }}>{icon}</ThemedText>
+      <View style={{ flex: 1, gap: 2 }}>
+        <ThemedText type="smallBold">{title}</ThemedText>
+        <ThemedText type="small" style={{ color: theme.textSecondary }}>
+          {children}
+        </ThemedText>
+      </View>
+    </View>
   );
 }

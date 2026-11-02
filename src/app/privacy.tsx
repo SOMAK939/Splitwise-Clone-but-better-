@@ -40,12 +40,15 @@ export default function PrivacyScreen() {
 
       <H>Deleting your data</H>
       <P>
-        To delete your account and data, open an issue on{' '}
+        Go to Profile → Delete my account. Your login, email address and UPI ID are removed straight away. Expenses you
+        shared with others stay in their group's history under the name "Deleted user", so their balances stay correct.
+      </P>
+      <P>
+        Questions? Open an issue on{' '}
         <Link href={CONTACT_URL}>
           <ThemedText type="linkPrimary">GitHub</ThemedText>
-        </Link>{' '}
-        from an account we can match to you, or ask in your group. We'll remove it within 30 days. Expenses you shared
-        with others stay in their group's history, shown without your name.
+        </Link>
+        .
       </P>
 
       <H>Changes</H>

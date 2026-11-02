@@ -103,6 +103,16 @@ export async function updateProfile(
   check(await supabase.from('profiles').update(changes).eq('id', userId));
 }
 
+/**
+ * Permanently delete my login. Past expenses stay in groups under the name
+ * "Deleted user" so friends' balances don't change. Signs out afterwards.
+ */
+export async function deleteMyAccount(): Promise<void> {
+  check(await supabase.rpc('delete_my_account'));
+  // The login no longer exists; clear it from this device too.
+  await supabase.auth.signOut({ scope: 'local' });
+}
+
 // ---------- Groups ----------
 
 /** Groups I'm in. RLS already limits this to my groups. */

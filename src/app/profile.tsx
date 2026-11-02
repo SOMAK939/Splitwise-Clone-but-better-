@@ -5,12 +5,12 @@
  */
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Loading, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { getProfile, updateProfile } from '@/lib/api';
+import { deleteMyAccount, getProfile, updateProfile } from '@/lib/api';
 import { useAuth, useUserId } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -46,6 +46,31 @@ export default function ProfileScreen() {
     }
   }
 
+  function confirmDelete() {
+    const title = 'Delete your account?';
+    const message =
+      'This removes your login and email for good. Expenses you shared stay in your groups as "Deleted user", ' +
+      "so settle up first if you can. This can't be undone.";
+    const doDelete = async () => {
+      setBusy(true);
+      try {
+        await deleteMyAccount(); // signs out, which takes you back to the start
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        setBusy(false);
+      }
+    };
+    // Buttons inside Alert don't work on web, so use the browser's confirm there.
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) doDelete();
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete forever', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  }
+
   if (name === null && !error) return <Loading />;
 
   return (
@@ -65,6 +90,7 @@ export default function ProfileScreen() {
         <Button title="Save" onPress={save} loading={busy} />
       </Card>
       <Button title="Sign out" variant="secondary" onPress={() => supabase.auth.signOut()} />
+      <Button title="Delete my account" variant="danger" onPress={confirmDelete} loading={busy} />
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: Spacing.three }}>
         <Link href="/about">
           <ThemedText type="linkPrimary">About</ThemedText>

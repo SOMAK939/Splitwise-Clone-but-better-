@@ -40,7 +40,7 @@ public/                PWA manifest, icons and HTML template
 ### 1. Create a free Supabase project
 
 1. Sign up at [supabase.com](https://supabase.com) and click **New project**. Pick the region closest to you (Mumbai for India).
-2. Open **SQL Editor**, paste the whole of `supabase/migrations/20261102000000_init.sql`, and click **Run**.
+2. Open **SQL Editor** and run each file in `supabase/migrations/` once, oldest first (paste it in, click **Run**).
 3. Go to **Project Settings → API Keys** (or **API**) and copy the **Project URL** and the **publishable** (or "anon public") key.
 4. Optional while testing: **Authentication → Sign In / Providers → Email**, turn off **Confirm email** so you can sign up without checking your inbox.
 
