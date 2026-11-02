@@ -8,7 +8,9 @@ It's built with [Expo](https://expo.dev) (React Native) and [Supabase](https://s
 
 ## What works today
 
-- Sign up / sign in with email and password
+- Sign up / sign in with Google or with email and password
+- Monthly badges (Chindi of the Month, Slow Settler...), recap and nudges
+- About, Privacy and Terms pages
 - Create groups and invite friends with a link or code
 - Add expenses, split equally or by exact amounts, with categories
 - Live balances, plus "fastest way to settle up" (debt simplification)
@@ -62,6 +64,23 @@ To try it on your phone, run `npm start` and scan the QR code with the **Expo Go
 4. Back in Supabase, **Authentication → URL Configuration**, set **Site URL** to your Vercel address so email links open the app.
 
 Every push to `main` now redeploys automatically. Share the link, and friends can tap **Add to Home Screen**.
+
+> Add the Vercel variables as type **Config**, not **Secret**: Vercel refuses `EXPO_PUBLIC_` secrets, and the values must be exactly the Project URL (`https://<id>.supabase.co`) and publishable key.
+
+### 4. Turn on "Continue with Google" (optional, about 10 minutes)
+
+1. Run `supabase/migrations/20261102120000_google_names.sql` in the Supabase **SQL Editor**, so Google users get their real name.
+2. Go to [Google Cloud Console](https://console.cloud.google.com), create a project called **SplitFree**.
+3. **APIs & Services → OAuth consent screen** (or **Google Auth Platform → Branding**): choose **External**, app name **SplitFree**, your support email, logo `assets/images/icon.png`, and these links:
+   - Home page: `https://<your-site>.vercel.app/about`
+   - Privacy policy: `https://<your-site>.vercel.app/privacy`
+   - Terms of service: `https://<your-site>.vercel.app/terms`
+4. Under **Audience**, click **Publish app** so anyone can sign in (name and email are basic scopes, so no review is needed).
+5. **Clients → Create client → Web application**:
+   - Authorized JavaScript origins: `https://<your-site>.vercel.app`
+   - Authorized redirect URIs: `https://<your-project-id>.supabase.co/auth/v1/callback`
+6. Copy the **Client ID** and **Client secret** into Supabase: **Authentication → Sign In / Providers → Google**, turn it on, paste both, **Save**.
+7. In Supabase **Authentication → URL Configuration**, make sure **Redirect URLs** includes `https://<your-site>.vercel.app/**`.
 
 ## Useful commands
 

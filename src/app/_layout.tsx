@@ -59,6 +59,11 @@ function Screens() {
 
       {/* Invite links work either way (see join.tsx). */}
       <Stack.Screen name="join" options={{ title: 'Join a group' }} />
+
+      {/* Public pages anyone can read, logged in or not. */}
+      <Stack.Screen name="about" options={{ title: 'About SplitFree' }} />
+      <Stack.Screen name="privacy" options={{ title: 'Privacy policy' }} />
+      <Stack.Screen name="terms" options={{ title: 'Terms of use' }} />
     </Stack>
   );
 }
