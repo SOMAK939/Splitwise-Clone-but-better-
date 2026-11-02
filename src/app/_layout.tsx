@@ -54,6 +54,7 @@ function Screens() {
         <Stack.Screen name="group/[id]/index" options={{ title: 'Group' }} />
         <Stack.Screen name="group/[id]/add-expense" options={{ title: 'Add expense', presentation: 'modal' }} />
         <Stack.Screen name="group/[id]/settle" options={{ title: 'Settle up', presentation: 'modal' }} />
+        <Stack.Screen name="group/[id]/insights" options={{ title: 'Badges & insights' }} />
       </Stack.Protected>
 
       {/* Invite links work either way (see join.tsx). */}

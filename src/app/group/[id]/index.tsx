@@ -17,13 +17,16 @@ import {
   categoryEmoji,
   deleteExpense,
   getGroupDetail,
+  localToday,
   subscribeToGroup,
+  toInsightInput,
   type Expense,
   type GroupDetail,
   type Settlement,
 } from '@/lib/api';
 import { useUserId } from '@/lib/auth';
 import { formatINR } from '@/lib/balances';
+import { computeBadges } from '@/lib/insights';
 
 export default function GroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,6 +63,7 @@ export default function GroupScreen() {
   }
 
   const { group, members, expenses, settlements, balances, transfers } = detail;
+  const badges = computeBadges(toInsightInput(detail, localToday()));
   // Quick lookup: user id → name. "You" for the current user.
   const nameOf = (uid: string) =>
     uid === userId ? 'You' : (members.find((m) => m.id === uid)?.display_name ?? 'Someone');
@@ -123,6 +127,26 @@ export default function GroupScreen() {
           onPress={() => router.push({ pathname: '/group/[id]/settle', params: { id } })}
         />
       </View>
+
+      {/* Fun insights teaser: tap to see all badges, recap and nudges */}
+      <Pressable onPress={() => router.push({ pathname: '/group/[id]/insights', params: { id } })}>
+        <Card>
+          <ThemedText type="smallBold">🏆 Badges & insights</ThemedText>
+          {badges.length === 0 ? (
+            <ThemedText themeColor="textSecondary">No badges yet this month. Tap to see the recap and settings.</ThemedText>
+          ) : (
+            // Roasts first in the preview: they're the fun part.
+            [...badges].sort((x, y) => Number(y.negative) - Number(x.negative)).slice(0, 3).map((b) => (
+              <ThemedText key={b.id}>
+                {b.emoji} {b.title}: <ThemedText style={{ fontWeight: 700 }}>{nameOf(b.userId)}</ThemedText>
+              </ThemedText>
+            ))
+          )}
+          <ThemedText type="linkPrimary">
+            {badges.length > 3 ? `See all ${badges.length} badges →` : 'See more →'}
+          </ThemedText>
+        </Card>
+      </Pressable>
 
       {/* Balances: one line per member */}
       <Card>
